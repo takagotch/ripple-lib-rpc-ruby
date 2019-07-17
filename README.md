@@ -17,9 +17,9 @@ ripple = Ripple.client(
   client_secret: "xxx"
 )
 
-tx_hash = ripple.send_basic_transaction({destination: "xxx", currency: "XRP",amount: ""})
+tx_hash = ripple.send_basic_transaction({destination: "xxx", currency: "XRP",amount: "1"})
 
-tx_hash = ripple.send_basic_transaction({destination: "xxx", currency: "USD", amount: ""})
+tx_hash = ripple.send_basic_transaction({destination: "xxx", currency: "USD", amount: "0.00001"})
 
 begin
   if ripple.transaction_succeeded?("xxx")
@@ -34,7 +34,7 @@ success = false
 failed = false
 begin
   puts "Sending transaction"
-  tx_hash = ripple.send_basic_transaction({destination: "xxx", currency: "USD",amount: ""})
+  tx_hash = ripple.send_basic_transaction({destination: "xxx", currency: "USD",amount: "0.00001"})
   success = true
 resuce Ripple::SubmitFailed => e
   puts "Transaction failed: " + e.message
@@ -89,9 +89,37 @@ if success
 end
 
 if succeess
+  begin
+    puts "Submitting transaction"
+    transaction.print_path_info
+    tx_hash = ripple.submit_transaction(transaction)
+    success = true
+  rescue Ripple::ServerFailed => e
+    puts "Transaction failed: " + e.message
+    failed = true
+  rescue Ripple::ServerUnavailable
+    puts "Server Unavailable"
+  rescue Ripple::Timeout
+    puts "Request timed out"
+  end while not success and not failed
 end
 
 if success
+  complete = false
+  begin
+    puts "Checking transaction status"
+    complete = ripple.transaction_succeded?(tx_hash)
+    if not complete
+      sleep 1
+    end
+  rescue Ripple::InvalidTxHash
+    puts "Invalid Tx Hash"
+  rescue Ripple::ServerUnavailable
+    puts "Server Unavailable"
+  rescue Ripple::Timedout
+    puts "Request timed out"
+  end while not complete
+  puts "Transaction complete"
 end
 
 
